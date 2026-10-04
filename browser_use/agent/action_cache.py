@@ -46,6 +46,8 @@ class CachedAction(BaseModel):
 	element: CachedElement | None
 	url: str
 	goal: str | None
+	# The agent's own evaluation of this step, written at the start of the next one ("... Verdict: Success").
+	outcome: str | None = None
 	error: str | None
 	is_done: bool
 
@@ -70,10 +72,13 @@ class ActionCache(BaseModel):
 
 def build_action_cache(task: str, history: AgentHistoryList) -> ActionCache:
 	actions: list[CachedAction] = []
-	for position, step in enumerate(history.history, start=1):
+	steps = history.history
+	for position, step in enumerate(steps, start=1):
 		if step.model_output is None:
 			continue
 		step_number = step.metadata.step_number if step.metadata else position
+		next_output = steps[position].model_output if position < len(steps) else None
+		outcome = next_output.evaluation_previous_goal if next_output else None
 		elements = step.state.interacted_element or []
 		# multi_act stops early when the page changes, so only actions that produced a result were executed.
 		for i, (action, result) in enumerate(zip(step.model_output.action, step.result)):
@@ -87,6 +92,7 @@ def build_action_cache(task: str, history: AgentHistoryList) -> ActionCache:
 					element=CachedElement.from_interacted(element) if element else None,
 					url=step.state.url,
 					goal=step.model_output.next_goal,
+					outcome=outcome,
 					error=result.error,
 					is_done=bool(result.is_done),
 				)
