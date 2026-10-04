@@ -891,6 +891,11 @@ class DOMInteractedElement:
 
 	element_hash: int
 
+	# Visible text and accessibility role/name: the stable identity of links and buttons that lack id/name
+	text: str | None = None
+	ax_role: str | None = None
+	ax_name: str | None = None
+
 	def to_dict(self) -> dict[str, Any]:
 		return {
 			'node_id': self.node_id,
@@ -903,6 +908,9 @@ class DOMInteractedElement:
 			'x_path': self.x_path,
 			'element_hash': self.element_hash,
 			'bounds': self.bounds.to_dict() if self.bounds else None,
+			'text': self.text,
+			'ax_role': self.ax_role,
+			'ax_name': self.ax_name,
 		}
 
 	@classmethod
@@ -918,4 +926,7 @@ class DOMInteractedElement:
 			bounds=enhanced_dom_tree.snapshot_node.bounds if enhanced_dom_tree.snapshot_node else None,
 			x_path=enhanced_dom_tree.xpath,
 			element_hash=hash(enhanced_dom_tree),
+			text=cap_text_length(enhanced_dom_tree.get_all_children_text(), 200) or None,
+			ax_role=enhanced_dom_tree.ax_node.role if enhanced_dom_tree.ax_node else None,
+			ax_name=enhanced_dom_tree.ax_node.name if enhanced_dom_tree.ax_node else None,
 		)
