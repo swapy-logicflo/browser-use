@@ -20,6 +20,7 @@ from browser_use.agent.cloud_events import (
 	CreateAgentTaskEvent,
 	UpdateAgentTaskEvent,
 )
+from browser_use.agent.action_cache import ActionCache, build_action_cache
 from browser_use.agent.message_manager.utils import save_conversation
 from browser_use.llm.base import BaseChatModel
 from browser_use.llm.messages import BaseMessage, ContentPartImageParam, ContentPartTextParam, UserMessage
@@ -2174,6 +2175,12 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 		if not file_path:
 			file_path = 'AgentHistory.json'
 		self.history.save_to_file(file_path, sensitive_data=self.sensitive_data)
+
+	def save_action_cache(self, file_path: str | Path) -> ActionCache:
+		"""Save the run as an element-level action log for LLM-free replay"""
+		cache = build_action_cache(self.task, self.history)
+		cache.save(file_path)
+		return cache
 
 	def pause(self) -> None:
 		"""Pause the agent before the next step"""
