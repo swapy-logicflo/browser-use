@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from browser_use.agent.views import AgentHistoryList
 from browser_use.dom.views import DOMInteractedElement
@@ -18,6 +18,8 @@ from browser_use.tokens.views import UsageSummary
 
 
 class CachedElement(BaseModel):
+	model_config = ConfigDict(extra='forbid')
+
 	tag: str
 	attributes: dict[str, str]
 	x_path: str
@@ -40,6 +42,8 @@ class CachedElement(BaseModel):
 
 
 class CachedAction(BaseModel):
+	model_config = ConfigDict(extra='forbid')
+
 	step_number: int
 	name: str
 	params: dict[str, Any]
@@ -53,6 +57,8 @@ class CachedAction(BaseModel):
 
 
 class ActionCache(BaseModel):
+	model_config = ConfigDict(extra='forbid')
+
 	task: str
 	start_url: str | None
 	actions: list[CachedAction]
@@ -82,7 +88,11 @@ def build_action_cache(task: str, history: AgentHistoryList) -> ActionCache:
 		elements = step.state.interacted_element or []
 		# multi_act stops early when the page changes, so only actions that produced a result were executed.
 		for i, (action, result) in enumerate(zip(step.model_output.action, step.result)):
-			name, params = next(iter(action.model_dump(exclude_unset=True).items()))
+			action_data = action.model_dump(exclude_unset=True)
+			if not action_data:
+				# An ActionModel with every field left at its default has no single action to name.
+				continue
+			name, params = next(iter(action_data.items()))
 			element = elements[i] if i < len(elements) else None
 			actions.append(
 				CachedAction(
